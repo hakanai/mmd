@@ -46,8 +46,6 @@ module MMD; module VMD
 				raise IOError.new("Not Vocaloid Motion Data: #{magic}")
 			end
 
-puts magic
-
 			# People say it's Shift_JIS but since it's a Windows application I am going to bet that it's really windows-31j.
 			self.model_name.force_encoding('windows-31j')
 
