@@ -36,6 +36,7 @@ module MMD; module VMD
 		COUNT_FORMAT = 'I<'
 		COUNT_SIZE = 4
 
+		# Reads motion data from the given IO stream.
 		def read(io)
 			self.magic, self.model_name = read_packed(io, HEADER_SIZE, 'A30 Z20')
 
@@ -111,6 +112,7 @@ module MMD; module VMD
 			#end
 		end
 
+		# Writes motion data to the given IO stream.
 		def write(io)
 			# We don't support the new format so I guess we better use the 0002 magic and not whatever the file had in it.
 			write_packed(io, HEADER_FORMAT, 'Vocaloid Motion Data 0002', self.model_name)
@@ -125,10 +127,15 @@ module MMD; module VMD
 				skin.write(io)
 			end
 
-			# End with the zero count which are supposedly at the end of the file.
-			write_packed(io, COUNT_SIZE, COUNT_FORMAT, 0)
-			write_packed(io, COUNT_SIZE, COUNT_FORMAT, 0)
-			write_packed(io, COUNT_SIZE, COUNT_FORMAT, 0)
+			write_packed(io, COUNT_FORMAT, self.cameras.size)
+			self.cameras.each do |camera|
+				camera.write(io)
+			end
+
+			write_packed(io, COUNT_FORMAT, self.lights.size)
+			self.lights.each do |light|
+				light.write(io)
+			end
 		end
 
 		# Computes the last frame for the sequence. The start frame is presumed to be 0.
