@@ -15,6 +15,7 @@ Yet sometimes you might want to render a single output file (e.g. for a concert.
 So I tried making a tool which can glue together separate sequences.
 
 If you didn't have a tool, this is what you would have to do:
+
     * Get Audacity or similar and use it to join the two wav files together.
     * In MMD, load that wav file.
     * From frame 0, load the first motion data. We'll assume it's in sync already.
@@ -22,6 +23,7 @@ If you didn't have a tool, this is what you would have to do:
     * Adjust the second motion data to match the music in the file (if you're good, maybe you can calculate the frame number before you add it, based on where you added it in the sound editor.)
 
 Currently the glue code naively uses the frame of the animation, which is insufficient.
+
     * The glue code should take wav files in addition to vmd files.
     * It should be possible to specify the frame offset between the vmd and wav file if they don't line up.  (could possibly put this job on the animator though. Adjusting one file is not that hard.)
     * It should be possible to configure an unlimited number of animations to join together.
@@ -32,6 +34,7 @@ Currently the glue code naively uses the frame of the animation, which is insuff
     * If two wav files have different sample rates, the resulting wav should be the higher of the two (i.e. never downsample.)
 
 When you hit the end of the first animation, strange interpolation occurs if the animation lacks explicit bone positions on the last frame.
+
     * Simple fix: have the code insert a bone at the last frame which matches the last position of that bone.
     * Proper fix: glue some more motion data between the two motion data files to bring the positions from one to the next in a sensible way.
     * Advanced fix: automatically generate some kind of sane animation for that intermediate file. :)
