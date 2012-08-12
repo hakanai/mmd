@@ -36,13 +36,23 @@ module MMD; module VMD
 		COUNT_FORMAT = 'I<'
 		COUNT_SIZE = 4
 
+		# Convenience method to create a new MotionData, reading the data from the specified file.
+		# Returns the MotionData with everything loaded.
+		def self.read_file(file)
+			File.open(file, 'r') do |io|
+				motion_data = new
+				motion_data.read(io)
+				motion_data
+			end
+		end
+
 		# Reads motion data from the given IO stream.
 		def read(io)
-			self.magic, self.model_name = read_packed(io, HEADER_SIZE, 'A30 Z20')
+			self.magic, self.model_name = read_packed(io, HEADER_SIZE, HEADER_FORMAT)
 
 			#TODO: I think there is a 0001 version of the format with "Vocaloid Motion Data File" or similar, but I have never seen such a file.
 			# I guess if I end up implementing that format, I will split the reading code into separate classes for each.
-			#TODO: Some files just say "Vocaloid Motion Data 0002" while others say "Vocaloid Motion Data 0002JKLM".
+			#TODO: Some files just say "Vocaloid Motion Data 0002" while others say "Vocaloid Motion Data 0002JKLM" (there might be a null before the J.)
 			if magic !~ /^Vocaloid Motion Data 0002/
 				raise IOError.new("Not Vocaloid Motion Data: #{magic}")
 			end
@@ -112,10 +122,17 @@ module MMD; module VMD
 			#end
 		end
 
+		# Convenience method to write the motion data out to a file.
+		def write_file(file)
+			File.open(file, 'w') do |io|
+				write(io)
+			end
+		end
+
 		# Writes motion data to the given IO stream.
 		def write(io)
 			# We don't support the new format so I guess we better use the 0002 magic and not whatever the file had in it.
-			write_packed(io, HEADER_FORMAT, 'Vocaloid Motion Data 0002', self.model_name)
+			write_packed(io, HEADER_FORMAT, "Vocaloid Motion Data 0002\0\0\0\0\0", self.model_name)
 
 			write_packed(io, COUNT_FORMAT, self.bones.size)
 			self.bones.each do |bone|
@@ -138,10 +155,40 @@ module MMD; module VMD
 			end
 		end
 
+		# Returns an array containing all timed records.
+		def all_timed_records
+			self.bones + self.skins + self.cameras + self.lights
+		end
+
+		# Computes the first frame for the sequence. Generally this would be 0 because animations tend to have the initial position data at frame 0.
+		def first_frame
+			self.all_timed_records.map { |r| r.frame }.min
+		end
+
 		# Computes the last frame for the sequence. The start frame is presumed to be 0.
 		# I could cache it, but if someone pokes a frame value directly from the record it's on, I wouldn't know to recompute it at the moment.
 		def last_frame
-			(self.bones + self.skins + self.cameras + self.lights).map { |r| r.frame }.max
+			self.all_timed_records.map { |r| r.frame }.max
+		end
+
+		# Translates all motion data forwards by the specified number of frames (backwards if the value is negative.)
+		# Raises ArgumentError if the resulting frame offset would be negative.
+		def translate_frames(frame_offset)
+			# Up-front check for sanity.
+			if self.first_frame + frame_offset < 0
+				raise ArgumentError, "Frame offset results in a negative frame number (first frame = #{self.first_frame}, frame offset = #{frame_offset})"
+			end
+
+			self.all_timed_records.each { |r| r.translate_frame(frame_offset) }
+		end
+
+		# Appends the specified motion data.
+		# The frame offsets are not modified automatically so if you want to translate that, use translate_frames first.
+		def append(motion_data)
+			self.bones += motion_data.bones
+			self.skins += motion_data.skins
+			self.cameras += motion_data.cameras
+			self.lights += motion_data.lights
 		end
 	end
 

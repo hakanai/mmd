@@ -6,11 +6,7 @@ require 'mmd/vmd/motion_data'
 require 'hexdump'
 
 def test(filename)
-	motion_data = File.open(filename, 'r') do |io|
-		motion_data = MMD::VMD::MotionData.new
-		motion_data.read(io)
-		motion_data
-	end
+	motion_data = MMD::VMD::MotionData.read_file(filename)
 
 	puts "File format: #{motion_data.magic}"
 	puts "Motion data is for model: #{motion_data.model_name.encode($stdout.external_encoding || 'UTF-8')}"
