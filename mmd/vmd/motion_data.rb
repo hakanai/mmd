@@ -30,12 +30,19 @@ module MMD; module VMD
 		# The light array. Each element specifies the colour and position of a light for one frame.
 		attr_accessor :lights
 
-		HEADER_FORMAT = 'A30 A20'
+		HEADER_FORMAT = 'A30 Z20'
 		HEADER_SIZE = 30 + 20
 
 		COUNT_FORMAT = 'I<'
 		COUNT_SIZE = 4
 
+		def initialize
+			self.bones = []
+			self.skins = []
+			self.cameras = []
+			self.lights = []
+		end
+		
 		# Convenience method to create a new MotionData, reading the data from the specified file.
 		# Returns the MotionData with everything loaded.
 		def self.read_file(file)
@@ -59,11 +66,6 @@ module MMD; module VMD
 
 			# People say it's Shift_JIS but since it's a Windows application I am going to bet that it's really windows-31j.
 			self.model_name.force_encoding('windows-31j')
-
-			self.bones = []
-			self.skins = []
-			self.cameras = []
-			self.lights = []
 
 			bone_count = read_packed(io, COUNT_SIZE, COUNT_FORMAT)[0]
 			(0...bone_count).each do |i|
@@ -171,6 +173,11 @@ module MMD; module VMD
 			self.all_timed_records.map { |r| r.frame }.max
 		end
 
+		# Computes the frame count. This is just one more than the last frame, since the sequence includes a frame 0.
+		def frame_count
+			self.last_frame + 1
+		end
+
 		# Translates all motion data forwards by the specified number of frames (backwards if the value is negative.)
 		# Raises ArgumentError if the resulting frame offset would be negative.
 		def translate_frames(frame_offset)
@@ -184,11 +191,23 @@ module MMD; module VMD
 
 		# Appends the specified motion data.
 		# The frame offsets are not modified automatically so if you want to translate that, use translate_frames first.
-		def append(motion_data)
-			self.bones += motion_data.bones
-			self.skins += motion_data.skins
-			self.cameras += motion_data.cameras
-			self.lights += motion_data.lights
+		def append(motion_data, offset)
+			offset_motion_data = motion_data.clone
+			offset_motion_data.translate_frames(offset)
+
+			self.bones += offset_motion_data.bones
+			self.skins += offset_motion_data.skins
+			self.cameras += offset_motion_data.cameras
+			self.lights += offset_motion_data.lights
+		end
+
+		def clone
+			cloned = super
+			cloned.bones = cloned.bones.clone
+			cloned.skins = cloned.skins.clone
+			cloned.cameras = cloned.cameras.clone
+			cloned.lights = cloned.lights.clone
+			cloned
 		end
 	end
 
